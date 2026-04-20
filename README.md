@@ -1,167 +1,167 @@
 # Contamination QC Pipeline
 
-This repository contains a small bioinformatics QC pipeline developed to detect contamination and sample inconsistencies in next generation sequencing (NGS) BAM files. The workflow combines two independent tools, VerifyBamID2 and NGSTroubleFinder, and produces a single summarized QC report.
+NGS contamination quality control pipeline integrating VerifyBamID2 and NGSTroubleFinder to assess contamination, sex consistency and general sample quality signals from aligned sequencing data.
 
-The motivation behind this pipeline is straightforward. Contamination detection based on a single algorithm can sometimes miss problematic samples or produce ambiguous results. By combining population SNP based contamination estimation (VerifyBamID2) with pileup based QC metrics (NGSTroubleFinder), the pipeline provides a more reliable and interpretable quality control step for sequencing data.
+This repository provides a lightweight and reproducible workflow for contamination screening in BAM files generated from exome or targeted sequencing experiments. The pipeline combines two complementary approaches: population SNP-based contamination estimation with VerifyBamID2 and pileup-based QC analysis with NGSTroubleFinder. Final outputs are consolidated into a single Excel summary report for rapid review in routine sequencing QC workflows.
 
-The pipeline accepts a directory containing BAM files, processes each sample, runs both tools, and generates a combined Excel summary file highlighting samples that exceed predefined contamination thresholds.
+The workflow was designed to support automated contamination triage before downstream variant analysis.
 
-This repository intentionally does not contain any real sequencing data, BAM files, or patient identifiers. Only the pipeline logic and a demonstration output file are included.
+Contamination detection using a single algorithm can sometimes lead to ambiguous interpretation. Some samples show borderline signals that are difficult to interpret using only one method. This workflow improves reliability by combining two orthogonal QC approaches. VerifyBamID2 estimates contamination using population SNP allele frequencies and produces the FREEMIX contamination metric. NGSTroubleFinder performs pileup-based QC analysis and provides contamination estimates, sex inference and sample-level anomaly signals. A lightweight Python aggregation layer merges results from both tools and produces a compact Excel report for analyst review.
 
----
+Pipeline workflow
 
-Pipeline overview
+Input BAM directory
+      │
+      ├── VerifyBamID2
+      │       └── FREEMIX contamination estimate
+      │
+      ├── BAM normalization for NGSTroubleFinder
+      │
+      ├── NGSTroubleFinder
+      │       ├── contamination estimate
+      │       ├── sex inference
+      │       └── QC anomaly signals
+      │
+      └── Python summary layer
+              └── contamination_summary.xlsx
 
-The pipeline processes BAM files in several steps.
+Repository structure
 
-First, VerifyBamID2 is executed for every BAM file. This tool estimates contamination using allele frequencies from a reference SNP panel. The key metric extracted from VerifyBamID2 output is the FREEMIX score, which represents the estimated contamination fraction.
-
-Next, the pipeline prepares the BAM files for NGSTroubleFinder. In some sequencing workflows chromosome naming conventions may differ (for example chr1 vs 1). The script normalizes BAM headers when necessary and prepares a metadata file describing each sample. NGSTroubleFinder then performs a pileup based analysis across known SNP positions. It estimates contamination, evaluates heterozygosity patterns, checks sex consistency and can detect potential sample relatedness within a cohort.
-
-After both tools finish, a Python step collects the results and merges them into a single summary table. The final Excel file contains contamination scores from both tools together with inferred sex information. Samples exceeding contamination thresholds are highlighted automatically.
-
----
-
-Directory structure
-
-The repository is intentionally minimal and contains only the files required to run the pipeline.
-
-contamination_qc  
-run_qc.sh  
-README.md  
-.gitignore  
-scripts/  
-examples/demo_contamination_summary.xlsx  
-
-The examples directory contains a demonstration QC report showing the structure of the final output without exposing real sample identifiers.
-
----
-
-Software requirements
-
-The pipeline was designed to run in a Linux environment and is easiest to install using conda.
-
-Required software includes:
-
-VerifyBamID2  
-samtools  
-Python 3.10  
-pandas  
-openpyxl  
-NGSTroubleFinder
-
----
+contamination-qc-pipeline
+│
+├── run_qc.sh
+├── README.md
+├── qc_env.yml
+├── .gitignore
+│
+├── scripts
+│       fix_chr_prefix.sh
+│
+└── examples
+        demo_contamination_summary.xlsx
 
 Installation
 
-If conda is not installed on your system, first install Miniconda from the official website.
+Clone the repository
 
-https://docs.conda.io/en/latest/miniconda.html
+git clone https://github.com/caganyasa/contamination-qc-pipeline.git
+cd contamination-qc-pipeline
 
-After installation reload your shell so the conda command becomes available.
+Create the conda environment
 
-Create a new environment for the pipeline.
+conda env create -f qc_env.yml
+conda activate qc_env
 
-conda create -n qc_env python=3.10  
-conda activate qc_env  
+Install NGSTroubleFinder
 
-Install the required bioinformatics tools.
-
-conda install -c bioconda verifybamid2 samtools  
-
-Install the Python dependencies used for generating the summary report.
-
-pip install pandas openpyxl  
-
-NGSTroubleFinder must be installed from its GitHub repository.
-
-git clone https://github.com/BCM-HGSC/NGS-Trouble-Finder.git  
-cd NGS-Trouble-Finder  
+git clone https://github.com/BCM-HGSC/NGS-Trouble-Finder.git
+cd NGS-Trouble-Finder
 pip install .
-
-Once installation is complete the command ngsTroubleFinder should be available in the terminal.
-
----
-
-Required reference resources
-
-VerifyBamID2 requires a reference genome and a SNP panel.
-
-A typical setup uses a reference FASTA file such as hg38 together with an index generated using samtools faidx.
-
-The SNP panel used by VerifyBamID2 is typically derived from the 1000 Genomes Project and contains allele frequency information for known variants.
-
-These large reference resources are not included in the repository and must be obtained separately.
-
----
+cd ..
 
 Running the pipeline
 
-To run the workflow simply execute the main script.
+Execute the main script
 
 bash run_qc.sh
 
-The script will prompt the user to provide the path to the directory containing BAM files. All BAM files within the directory will be processed automatically.
+The script will prompt for the directory containing BAM files. All BAM files inside the directory will be processed automatically.
 
-During execution the pipeline creates an output directory called qc_results. Inside this directory the raw outputs from VerifyBamID2 and NGSTroubleFinder are stored together with the final summary report.
+Example input directory
 
-The most important output file produced by the pipeline is contamination_summary.xlsx. This Excel file merges contamination metrics from both tools and highlights samples that may require further inspection.
+/data/bams
+    sample1.bam
+    sample2.bam
+    sample3.bam
 
----
+Output structure
 
-Contamination thresholds
+After execution results will be written to the directory qc_results
 
-The pipeline applies simple threshold values to flag potentially contaminated samples.
+qc_results
+│
+├── verifybamid
+│      *.selfSM
+│
+├── ngstf
+│      qcReport.tsv
+│      report.html
+│
+└── contamination_summary.xlsx
 
-For VerifyBamID2 a FREEMIX value greater than or equal to 0.02 is considered suspicious.
+The final Excel report contains four columns
 
-For NGSTroubleFinder a contamination value greater than or equal to 0.05 is typically flagged.
+Sample
+VerifyBamID2
+NGSTF
+Sex
 
-These thresholds can be adjusted depending on the sequencing platform, capture kit or internal laboratory QC policies.
+Rows exceeding contamination thresholds are automatically highlighted.
 
----
+Default thresholds used in the pipeline
+
+VerifyBamID2 contamination threshold
+
+FREEMIX ≥ 0.02
+
+NGSTroubleFinder contamination threshold
+
+contamination ≥ 0.05
+
+These thresholds can be modified depending on sequencing platform, capture kit or laboratory QC policy.
+
+Reference resources
+
+VerifyBamID2 requires a reference genome and a SNP panel. Example reference genome files
+
+hg38.fa
+hg38.fa.fai
+
+Example SNP panel
+
+1000g.phase3.10k.b38.exome.vcf.gz.dat
+
+These reference resources are not included in the repository and must be prepared separately.
 
 Example output
 
-An anonymized example report is provided in the examples directory.
+An anonymized demonstration report is provided in the repository
 
 examples/demo_contamination_summary.xlsx
 
-The sample names in this file are randomized and do not correspond to real sequencing data. The structure of the file matches the report produced by the pipeline.
+Sample identifiers in this file are randomized and do not correspond to real sequencing data.
 
-The report contains four columns: Sample name, VerifyBamID2 contamination score, NGSTroubleFinder contamination score and inferred sex information. Samples exceeding contamination thresholds are highlighted automatically.
+Supporting scripts
 
----
-
-Data privacy note
-
-This repository does not contain real sequencing data or patient related identifiers. BAM files, reference genomes, SNP panels and internal QC results are intentionally excluded.
-
-The goal of the repository is to demonstrate the pipeline structure and provide reproducible QC logic without exposing sensitive data.
-
----
+The scripts directory contains helper utilities used by the pipeline. For example fix_chr_prefix.sh is used to normalize chromosome naming conventions in BAM headers to ensure compatibility between BAM files and downstream QC tools.
 
 Tools and credits
 
-This pipeline integrates two open source tools developed by the genomics community.
+This pipeline integrates the following open source tools.
 
-VerifyBamID2  
-https://github.com/Griffan/VerifyBamID  
+VerifyBamID2
+https://github.com/Griffan/VerifyBamID
 
-VerifyBamID2 is used for contamination estimation based on population allele frequencies. The pipeline extracts the FREEMIX contamination metric from VerifyBamID2 outputs.
+VerifyBamID2 is used for population SNP-based contamination estimation and the pipeline extracts the FREEMIX metric from selfSM output files.
 
-NGSTroubleFinder  
-https://github.com/BCM-HGSC/NGS-Trouble-Finder  
+NGSTroubleFinder
+https://github.com/BCM-HGSC/NGS-Trouble-Finder
 
-NGSTroubleFinder performs pileup based quality control checks including contamination estimation, sex inference and relatedness detection across samples.
+NGSTroubleFinder is used for pileup-based QC analysis including contamination detection, sex inference and anomaly signals.
 
-If you use this pipeline in research or production workflows, please cite the original tools accordingly.
+If you use this workflow in research or production environments please cite the original tools accordingly.
 
----
+Limitations
+
+Large reference resources such as genome FASTA files and SNP panels are not distributed with this repository. Thresholds implemented in the current workflow are intended for practical QC screening and may require adjustment depending on sequencing assay design and laboratory validation criteria.
+
+Data privacy
+
+This repository does not contain real sequencing data or patient identifiers. BAM files, FASTQ files, reference genomes and internal QC outputs are intentionally excluded. The repository demonstrates only the pipeline logic and output structure.
 
 Author
 
 Çağan Yasa  
 Bioinformatics Specialist
 
-The pipeline was developed as part of routine NGS quality control workflows used in sequencing environments.
+This pipeline was developed as part of routine NGS contamination quality control workflows used in sequencing environments.
