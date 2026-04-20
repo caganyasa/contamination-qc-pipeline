@@ -1,0 +1,53 @@
+# data
+*.bam
+*.bai
+*.cram
+*.crai
+*.sam
+
+# qc outputs
+qc_results/
+clean_bam/
+test_ngstf_clean/
+*.selfSM
+*.Ancestry
+*.log
+run.log
+
+# temp / backups
+*.save
+*.save.*
+*.bak
+header.sam
+fixed.bam
+fixed.bam.bai
+test_chr.bam
+test_chr.bam.bai
+
+# references
+resources/
+verifybam_resources/
+*.fa
+*.fa.fai
+*.fasta
+*.fasta.fai
+*.vcf
+*.vcf.gz
+*.tbi
+*.dat
+*.bed
+*.mu
+*.UD
+*.V
+
+# metadata / local env
+metadata.tsv
+*.yml
+*.yaml
+.env
+
+# office / generated examples
+*.xlsx
+*.xls
+*.csv
+*.html
