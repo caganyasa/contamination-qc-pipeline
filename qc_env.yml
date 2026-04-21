@@ -1,0 +1,14 @@
+name: qc_env
+
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.10
+  - samtools
+  - bcftools
+  - verifybamid2
+  - pandas
+  - openpyxl
