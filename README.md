@@ -93,8 +93,11 @@ Example input directory
 ```
 /data/bams/
     sample1.bam
+    sample1.bam.bai
     sample2.bam
+    sample2.bam.bai
     sample3.bam
+    sample3.bam.bai
 ```
 
 ---
